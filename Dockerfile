@@ -1,35 +1,47 @@
-# Start from RunPod/NVIDIA-compatible CUDA base image
+# NVIDIA CUDA base image for GPU support
 FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04
 
-# Prevent interactive prompts during apt installations
 ENV DEBIAN_FRONTEND=noninteractive
-ENV PATH="/root/.local/share/magic/bin:${PATH}"
+ENV PYTHONUNBUFFERED=1
 
-# Install core utilities
+# Install system dependencies and Python
 RUN apt-get update && apt-get install -y \
+    python3.11 \
+    python3-pip \
+    python3.11-venv \
     curl \
     git \
-    bash \
     && rm -rf /var/lib/apt/lists/*
 
-# Install the Modular Magic CLI
-RUN curl -ssL https://magic.modular.com/ | bash
+# Install uv package manager
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Create and configure the workspace directory
+# Set PATH to include uv
+ENV PATH="/root/.local/bin:${PATH}"
+
 WORKDIR /workspace
 
-# Initialize the mojo environment structure 
-RUN magic init gpu-playground --format mojoproject
+# Install Mojo, PyTorch, Jupyter, and JupyterLab using uv
+RUN uv pip install \
+    --python 3.11 \
+    mojo \
+    torch \
+    jupyter \
+    jupyterlab \
+    ipykernel
 
-# Step into the environment directory to pin and fetch the Mojo tools
-WORKDIR /workspace/gpu-playground
-RUN magic add mojo
+# Create Jupyter config directory
+RUN mkdir -p /root/.jupyter
 
-# Pre-warm the environment cache by installing Mojo into the layer
-RUN magic run mojo --version
+# Configure Jupyter to allow root access
+RUN echo "c.NotebookApp.allow_root = True" >> /root/.jupyter/jupyter_notebook_config.py && \
+    echo "c.NotebookApp.ip = '0.0.0.0'" >> /root/.jupyter/jupyter_notebook_config.py
 
-# Set bash to automatically load into the magic environment upon connection
-RUN echo "cd /workspace/gpu-playground && magic shell" >> /root/.bashrc
+# Expose Jupyter port
+EXPOSE 8888
 
-# Ensure RunPod lands inside the container's interactive shell
-ENTRYPOINT ["/bin/bash"]
+# Verify Mojo installation
+RUN mojo --version
+
+# Start JupyterLab
+CMD ["jupyter", "lab", "--ip=0.0.0.0", "--allow-root", "--no-browser"]
