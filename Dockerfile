@@ -21,14 +21,15 @@ ENV PATH="/root/.local/bin:${PATH}"
 
 WORKDIR /workspace
 
-# Install Mojo, PyTorch, Jupyter, and JupyterLab using uv
-RUN uv pip install \
-    --python 3.11 \
-    mojo \
-    torch \
-    jupyter \
-    jupyterlab \
-    ipykernel
+# Install dependencies separately to isolate issues
+# First install PyTorch (often causes conflicts)
+RUN uv pip install --python 3.11 torch --index-strategy=unsafe-best-match
+
+# Then install Mojo
+RUN uv pip install --python 3.11 mojo
+
+# Finally install Jupyter stack
+RUN uv pip install --python 3.11 jupyter jupyterlab ipykernel
 
 # Create Jupyter config directory
 RUN mkdir -p /root/.jupyter
