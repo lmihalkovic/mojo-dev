@@ -21,15 +21,15 @@ ENV PATH="/root/.local/bin:${PATH}"
 
 WORKDIR /workspace
 
-# Install dependencies separately to isolate issues
+# Install dependencies using system Python
 # First install PyTorch (often causes conflicts)
-RUN uv pip install --python 3.11 torch --index-strategy=unsafe-best-match
+RUN uv pip install --system torch
 
 # Then install Mojo
-RUN uv pip install --python 3.11 mojo
+RUN uv pip install --system mojo
 
 # Finally install Jupyter stack
-RUN uv pip install --python 3.11 jupyter jupyterlab ipykernel
+RUN uv pip install --system jupyter jupyterlab ipykernel
 
 # Create Jupyter config directory
 RUN mkdir -p /root/.jupyter
